@@ -60,7 +60,7 @@ pr = RPCClient( "ProductionManagement/ProductionRequest" )
 filter = {"RequestState":"Done","RequestType":'Simulation'}
 #res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {"RequestType":'Simulation','IsModel':1} )['Value']
 #res = pr.getProductionRequest([38608])
-res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608, 38610]} )['Value']
+res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608, 27133]})['Value']
 
 ############################################
 #print res
@@ -105,16 +105,27 @@ for i in range(1, stepno):
               step[keys[i]] = values[i]
       prod[stepid] = step
 
+#passes = []
+#for i in range(1, stepno):
+#   stepid = 'p%dUse' % i
+#   procid = 'p%dPass' % i
+#   if stepid in rows[0]:
+#     if rows[0][stepid] == 'Yes':
+#        passes.append(rows[0][procid])
+#
 passes = []
-for i in range(1, stepno):
-   stepid = 'p%dUse' % i
-   procid = 'p%dPass' % i
-   if stepid in rows[0]:
-     if rows[0][stepid] == 'Yes':
-        passes.append(rows[0][procid])
-
+if prod["RequestType"] == 'Simulation':
+    passes.append('MC')
+else:
+    passes.append('LHCb')
+#passes[0] = 'MC' if prod["RequestType"] == 'Simulation' else 'LHCb'
+temp_ = re.findall(r'-20\d\d-', prod["SimCondition"])[0]
+passes.append(temp_.strip('-'))
+passes.append(prod["SimCondition"]) 
+passes.append(prod["ProPath"])
+passes.append(prod["EventType"])
 prod["bkkpath"] = "/".join(passes)
-
+prod["year"] = temp_.strip('-')
 print json.dumps(prod, default=json_serial, indent=4, separators=(',', ': '))
 #res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608,38610,38609,38603]} )['Value']
 
