@@ -60,75 +60,80 @@ pr = RPCClient( "ProductionManagement/ProductionRequest" )
 filter = {"RequestState":"Done","RequestType":'Simulation'}
 #res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {"RequestType":'Simulation','IsModel':1} )['Value']
 #res = pr.getProductionRequest([38608])
-res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608, 27133]})['Value']
-
+res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {"RequestType":'Simulation', "RequestState":"Done"})['Value']
 ############################################
-#print res
-#print res.keys
-text = res['Rows'][0]["ProDetail"]
-#print json.dumps(text, default=json_serial, indent=4, separators=(',', ': '))
-# Count steps
-stepno = 0
-temp = re.findall(r"p\dStep", text)
-stepno = len(temp)
-#print temp, stepno
-# Create production dict
 
-prod = dict()
-# Take all the useful stuff
-prod["SimCondition"] = res['Rows'][0]["SimCondition"]
-prod["RequestType"] = res['Rows'][0]["RequestType"]
-prod["EventType"]= res['Rows'][0]["EventType"]
-prod["NumberOfEvents"]= res['Rows'][0]["NumberOfEvents"]
-prod["ProPath"]= res['Rows'][0]["ProPath"]
-prod["RequestID"]= res['Rows'][0]["RequestID"]
-prod["upTime"]= res['Rows'][0]["upTime"]
-prod["crTime"]= res['Rows'][0]["crTime"]
-# Ditch the rest
-rows = [converta( x ) for x in res['Rows']]
-# print json.dumps(rows, default=json_serial, indent=4, separators=(',', ': '))
-
-
-current = {}
-for i in range(1, stepno):
-  stepid = 'p%dStep' % i
-  if stepid in rows[0]:
-    if rows[0][stepid]:
-      a = bk.getAvailableSteps({'StepId':rows[0][stepid]})
-      if not a['OK']:
-        print a['Message']
-        exit(1)
-      values = a["Value"]["Records"][0]
-      keys = values[-1]["ParameterNames"]
-      step = {}
-      for i in range(len(keys)):
-              step[keys[i]] = values[i]
-      prod[stepid] = step
-
-#passes = []
-#for i in range(1, stepno):
-#   stepid = 'p%dUse' % i
-#   procid = 'p%dPass' % i
-#   if stepid in rows[0]:
-#     if rows[0][stepid] == 'Yes':
-#        passes.append(rows[0][procid])
-#
-passes = []
-if prod["RequestType"] == 'Simulation':
-    passes.append('MC')
-else:
-    passes.append('LHCb')
-#passes[0] = 'MC' if prod["RequestType"] == 'Simulation' else 'LHCb'
-temp_ = re.findall(r'-20\d\d-', prod["SimCondition"])[0]
-passes.append(temp_.strip('-'))
-passes.append(prod["SimCondition"]) 
-passes.append(prod["ProPath"])
-passes.append(prod["EventType"])
-prod["bkkpath"] = "/".join(passes)
-prod["year"] = temp_.strip('-')
-print json.dumps(prod, default=json_serial, indent=4, separators=(',', ': '))
-#res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608,38610,38609,38603]} )['Value']
-
-#print rows[0]
-
+allpr = res['Rows']
+allpr = allpr[:5]
+for pr in allpr:
+    text = pr["ProDetail"]
+    print text
+    # Count steps
+    stepno = 0
+    temp = re.findall(r"\dStep", text)
+    stepno = len(temp)
+    # Create production dict
+    prod = dict()
+    # Take all the useful stuff
+    
+    prod["EventType"]= pr["EventType"]
+    prod["ProPath"]= pr["ProPath"]
+    prod["SimCondition"] = pr["SimCondition"]
+    prod["RequestType"] = pr["RequestType"]
+    '''
+    prod["NumberOfEvents"]= pr["NumberOfEvents"]
+    prod["RequestID"]= pr["RequestID"]
+    prod["upTime"]= pr["upTime"]
+    prod["crTime"]= pr["crTime"]
+    '''
+    # Ditch the rest
+    current = {}
+    print "stepno" + str(stepno)
+    for i in range(1, stepno):
+      print "wtf wtf"
+      stepid = 'p%dStep' % i
+      conv = [converta(x) for x in allpr]
+      print "Conv:" + conv
+      if stepid in conv[0]:
+        if conv[0][stepid]:
+          a = bk.getAvailableSteps({'StepId':conv[0][stepid]})
+          if not a['OK']:
+            print a['Message']
+            exit(1)
+          values = a["Value"]["Records"][0]
+          keys = values[-1]["ParameterNames"]
+          step = {}
+          for j in range(len(keys)):
+                  step[keys[j]] = values[j]
+          prod[stepid] = step
+          prod[stepid + "ID"] = conv[0][stepid]
+    passes = []
+    if prod["RequestType"] == 'Simulation':
+        passes.append('MC')
+    else:
+        passes.append('LHCb')
+    #passes[0] = 'MC' if prod["RequestType"] == 'Simulation' else 'LHCb'
+    findall = re.findall(r'-20\d\d-', prod["SimCondition"])
+    temp_ = ""
+    if len(findall) > 0:
+        temp_ = findall[0]
+        passes.append(temp_.strip('-'))
+    else:
+        findall = re.findall(r'[a-z]20\d\d-', prod["SimCondition"])
+        if len(findall) > 0:
+            temp_ = findall[0]
+            passes.append(temp_[1:5])
+        else:
+            print prod["SimCondition"]
+            #break
+    passes.append(prod["SimCondition"]) 
+    passes.append(prod["ProPath"])
+    passes.append(prod["EventType"])
+    passes = [x or '' for x in passes]
+    if len(passes) > 0:
+        prod["bkkpath"] = "/".join(passes)
+        print prod["bkkpath"]
+    prod["year"] = temp_[1:5]
+    #print json.dumps(prod, default=json_serial, indent=4, separators=(',', ': '))
+    #res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608,38610,38609,38603]} )['Value']
 
