@@ -54,53 +54,41 @@ def converta( req ):
     return result
 
 pr = RPCClient( "ProductionManagement/ProductionRequest" )
-#res = pr.getProductionRequestList( 0, '', 'ASC', 0, 1, {"RequestState":"Done"} )['Value']
-#op = pr.getFilterOptions()['Value']
-
-filter = {"RequestState":"Done","RequestType":'Simulation'}
-#res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {"RequestType":'Simulation','IsModel':1} )['Value']
-#res = pr.getProductionRequest([38608])
-res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {"RequestType":'Simulation', "RequestState":"Done"})['Value']
+filter = {"RequestState":"Done","RequestType":'Simulation', 'RequestID':[38608,38610,38609,38603]}
+#res = pr.getProductionRequestList( 0, '', 'ASC', 1, 1, filter)['Value']
+res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, filter)['Value']
+#res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608,38610,38609,38603]} )['Value']
+print len(res)
 ############################################
-
-allpr = res['Rows']
-allpr = allpr[:5]
-for pr in allpr:
-    text = pr["ProDetail"]
-    print text
-    # Count steps
-    stepno = 0
-    temp = re.findall(r"\dStep", text)
+rows = [converta(x) for x in res['Rows']]
+print len(rows)
+for pr in rows:
+    temp = re.findall(r"p\dStep", str(pr))
     stepno = len(temp)
     # Create production dict
     prod = dict()
     # Take all the useful stuff
-    
     prod["EventType"]= pr["EventType"]
     prod["ProPath"]= pr["ProPath"]
     prod["SimCondition"] = pr["SimCondition"]
     prod["RequestType"] = pr["RequestType"]
-    '''
     prod["NumberOfEvents"]= pr["NumberOfEvents"]
     prod["RequestID"]= pr["RequestID"]
     prod["upTime"]= pr["upTime"]
     prod["crTime"]= pr["crTime"]
-    '''
+    
     # Ditch the rest
     current = {}
-    print "stepno" + str(stepno)
     for i in range(1, stepno):
-      print "wtf wtf"
       stepid = 'p%dStep' % i
-      conv = [converta(x) for x in allpr]
-      print "Conv:" + conv
-      if stepid in conv[0]:
-        if conv[0][stepid]:
-          a = bk.getAvailableSteps({'StepId':conv[0][stepid]})
+      if stepid in pr:
+        if pr[stepid]:
+          a = bk.getAvailableSteps({'StepId':pr[stepid]})
           if not a['OK']:
             print a['Message']
             exit(1)
           values = a["Value"]["Records"][0]
+          '''
           keys = values[-1]["ParameterNames"]
           step = {}
           for j in range(len(keys)):
@@ -134,6 +122,7 @@ for pr in allpr:
         prod["bkkpath"] = "/".join(passes)
         print prod["bkkpath"]
     prod["year"] = temp_[1:5]
-    #print json.dumps(prod, default=json_serial, indent=4, separators=(',', ': '))
+    '''
+    print json.dumps(prod, default=json_serial, indent=4, separators=(',', ': '))
     #res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608,38610,38609,38603]} )['Value']
 
