@@ -1,4 +1,4 @@
-import cPickle
+import cPickle, re
 from DIRAC.Core.Base import Script
 Script.parseCommandLine( ignoreErrors = True )
 from DIRAC.Core.DISET.RPCClient      import RPCClient
@@ -51,31 +51,33 @@ pr = RPCClient( "ProductionManagement/ProductionRequest" )
 #op = pr.getFilterOptions()['Value']
 
 filter = {"RequestState":"Done","RequestType":'Simulation'}
-res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {"RequestType":'Simulation','IsModel':1} )['Value']
+#res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {"RequestType":'Simulation','IsModel':1} )['Value']
+res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608,38610,38609,38603]} )['Value']
 rows = [converta( x ) for x in res['Rows']]
 ############################################
-for i in range(1,10):
-  stepid = 'p%dStep' % i
-  print stepid
-  if stepid in rows[1]:
-    if rows[0][stepid]:
-      res = bk.getAvailableSteps({'StepId':rows[0][stepid]})
-      if not res['OK']:
-        print res['Message']
-        exit(1)
-      print res['Value']
-passes = []
-for i in range(1,10):
-   stepid = 'p%dUse' % i
-   procid = 'p%dPass' % i
-   if stepid in rows[0]:
-     if rows[0][stepid] == 'Yes':
-        passes.append(rows[0][procid])
-
-print "/".join(passes)
-
-res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608,38610,38609,38603]} )['Value']
-
-
-
-
+print len(rows)
+for r in rows:
+    temp = re.findall(r"\dStep", str(r))
+    no = len(temp)
+    for i in range(1,no):
+      stepid = 'p%dStep' % i
+      print stepid
+      if stepid in r:
+        if r[stepid]:
+          res = bk.getAvailableSteps({'StepId':r[stepid]})
+          if not res['OK']:
+            print res['Message']
+            exit(1)
+          print res['Value']
+#passes = []
+#for i in range(1,10):
+#   stepid = 'p%dUse' % i
+#   procid = 'p%dPass' % i
+#   if stepid in rows[0]:
+#     if rows[0][stepid] == 'Yes':
+#        passes.append(rows[0][procid])
+#
+#print "/".join(passes)
+#
+#res = pr.getProductionRequestList( 0, '', 'ASC', 0, 0, {'RequestID':[38608,38610,38609,38603]} )['Value']
+#
